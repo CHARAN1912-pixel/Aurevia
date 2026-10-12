@@ -1,0 +1,507 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MemoSpace — Your Notes, Beautifully Organized</title>
+<style>
+:root {
+  --bg:#f7f8fc; --surface:#fff; --text:#202432;
+  --muted:#81889a; --line:#e8eaf1; --accent:#6658e8;
+  --shadow:0 5px 24px #2427470a;
+}
+body.dark {
+  --bg:#14151c; --surface:#20212a; --text:#f2f3fa;
+  --muted:#a0a5b5; --line:#343542; --accent:#a49aff;
+  --shadow:0 5px 24px #0002;
+}
+* {box-sizing:border-box}
+body {margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.5 Inter,system-ui,-apple-system,sans-serif;
+  transition:background .2s}
+button,input,textarea,select {font:inherit}
+button {cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible {
+  outline:2px solid var(--accent);outline-offset:2px
+}
+.app {display:flex;min-height:100vh}
+.sidebar {width:245px;flex-shrink:0;padding:25px 15px;
+  border-right:1px solid var(--line);background:var(--surface)}
+.brand {display:flex;align-items:center;gap:10px;
+  font-size:21px;font-weight:800;letter-spacing:-.7px;padding:0 10px 28px}
+.logo {width:38px;height:38px;border-radius:13px;background:var(--accent);
+  color:white;display:grid;place-items:center;font-size:22px}
+.nav {display:flex;align-items:center;gap:13px;width:100%;
+  padding:12px 14px;border:0;background:transparent;color:var(--muted);
+  text-align:left;border-radius:12px;margin:3px 0;font-weight:600}
+.nav:hover,.nav.active {background:color-mix(in srgb,var(--accent) 12%,transparent);
+  color:var(--accent)}
+.nav .count {margin-left:auto;font-size:12px}
+.side-label {font-size:11px;color:var(--muted);font-weight:800;
+  letter-spacing:1.4px;padding:26px 13px 8px}
+.labels-list {display:grid;gap:3px}
+.side-bottom {margin-top:35px;padding:12px;color:var(--muted);
+  font-size:12px;line-height:1.8}
+.main {flex:1;min-width:0;padding:27px clamp(16px,3.5vw,48px)}
+.topbar {display:flex;justify-content:space-between;align-items:center;
+  gap:15px;margin-bottom:30px}
+.search {flex:1;max-width:550px;position:relative}
+.search input {width:100%;border:1px solid var(--line);border-radius:13px;
+  padding:13px 15px 13px 43px;background:var(--surface);color:var(--text);
+  outline:none}
+.search input:focus {border-color:var(--accent)}
+.search span {position:absolute;left:15px;top:11px;color:var(--muted)}
+.actions {display:flex;gap:9px;align-items:center}
+.icon-btn {border:1px solid var(--line);border-radius:11px;
+  background:var(--surface);color:var(--text);padding:10px 12px}
+.icon-btn:hover {border-color:var(--accent)}
+.primary {background:var(--accent);color:white;border:0;border-radius:11px;
+  padding:12px 17px;font-weight:700}
+.primary:hover {filter:brightness(1.08)}
+.heading {display:flex;justify-content:space-between;align-items:end;
+  gap:12px;margin-bottom:23px}
+h1 {font-size:clamp(25px,3vw,34px);letter-spacing:-1.1px;margin:0}
+.subtitle {color:var(--muted);margin-top:5px;font-size:14px}
+.section-title {font-size:12px;letter-spacing:1.3px;color:var(--muted);
+  font-weight:800;margin:25px 0 13px}
+.note-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.note {background:var(--surface);border:1px solid var(--line);
+  border-radius:16px;padding:17px;min-width:0;position:relative;
+  box-shadow:var(--shadow);transition:transform .16s,border .16s}
+.note:hover {transform:translateY(-2px);border-color:#aaa2f0}
+.note.pinned {border-top:3px solid var(--accent)}
+.note h3 {font-size:16px;line-height:1.4;margin:3px 26px 9px;
+  overflow-wrap:anywhere}
+.note-body {white-space:pre-wrap;overflow-wrap:anywhere;
+  color:var(--muted);font-size:14px;max-height:190px;overflow:hidden}
+.pin {position:absolute;right:12px;top:12px;border:0;background:transparent;
+  color:var(--muted);font-size:17px;padding:2px}
+.note-label {display:inline-block;background:#8b80e51b;color:var(--accent);
+  border-radius:6px;padding:3px 7px;font-size:11px;margin:12px 4px 0 0}
+.note-footer {display:flex;align-items:center;gap:4px;
+  border-top:1px solid var(--line);margin-top:15px;padding-top:10px}
+.note-footer button {border:0;background:transparent;color:var(--muted);
+  padding:5px 7px;border-radius:7px;font-size:12px}
+.note-footer button:hover {background:var(--bg);color:var(--text)}
+.note-date {font-size:10px;color:var(--muted);margin-left:auto}
+.empty {grid-column:1/-1;text-align:center;padding:65px 15px;
+  border:1px dashed var(--line);border-radius:16px;color:var(--muted)}
+.empty div {font-size:36px;margin-bottom:10px}
+.editor-backdrop {position:fixed;inset:0;background:#10111a66;
+  display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.editor-backdrop.show {display:flex}
+.editor {width:min(570px,100%);max-height:90vh;overflow:auto;
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:20px;padding:23px;box-shadow:0 25px 100px #0003}
+.editor-top {display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:17px}
+.editor-top h2 {margin:0;font-size:20px}
+.field {width:100%;border:1px solid var(--line);border-radius:10px;
+  padding:12px;background:var(--bg);color:var(--text);margin-bottom:12px}
+#noteTitle {font-size:18px;font-weight:700}
+#noteContent {resize:vertical;min-height:160px}
+.editor-row {display:flex;gap:10px}
+.editor-row>* {flex:1;min-width:0}
+.editor-actions {display:flex;justify-content:space-between;
+  gap:10px;margin-top:12px;align-items:center}
+.checklist {margin:10px 0}
+.check-row {display:flex;gap:8px;align-items:center;margin:7px 0}
+.check-row input[type=text] {flex:1;min-width:0;border:0;background:transparent;
+  color:var(--text);padding:5px}
+.check-row input:checked+input {text-decoration:line-through;color:var(--muted)}
+#toast {position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  padding:12px 18px;background:var(--text);color:var(--surface);
+  border-radius:12px;display:none;z-index:10;box-shadow:var(--shadow)}
+.mobile-nav {display:none}
+@media(max-width:1050px) {
+  .note-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sidebar {width:210px}
+}
+@media(max-width:650px) {
+  .sidebar {display:none}
+  .main {padding:18px 14px 85px}
+  .topbar {flex-wrap:wrap;margin-bottom:23px}
+  .search {order:2;max-width:none;flex-basis:100%}
+  .actions {margin-left:auto}
+  .primary {padding:10px 12px}
+  .note-grid {grid-template-columns:1fr}
+  .heading {align-items:start}
+  .mobile-nav {display:flex;position:fixed;bottom:0;left:0;right:0;
+    background:var(--surface);border-top:1px solid var(--line);
+    justify-content:space-around;padding:9px 4px calc(9px + env(safe-area-inset-bottom));
+    z-index:3}
+  .mobile-nav button {border:0;background:transparent;color:var(--muted);
+    font-size:11px;display:grid;justify-items:center;gap:3px}
+  .mobile-nav button span {font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">✳</div> MemoSpace</div>
+    <button class="nav active" data-view="notes">▤ <span>All notes</span></button>
+    <button class="nav" data-view="pinned">⌖ <span>Pinned</span></button>
+    <button class="nav" data-view="checklists">☑ <span>Checklists</span></button>
+    <button class="nav" data-view="favorites">☆ <span>Favorites</span></button>
+    <button class="nav" data-view="archive">▣ <span>Archive</span></button>
+    <button class="nav" data-view="trash">♲ <span>Trash</span></button>
+    <div class="side-label">YOUR LABELS</div>
+    <div class="labels-list" id="labelList"></div>
+    <button class="nav" id="addLabel">＋ <span>New label</span></button>
+    <div class="side-bottom">Your thoughts, organized.<br>Stored privately in this browser.</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="search"><span>⌕</span>
+        <input id="search" placeholder="Search your notes..." aria-label="Search notes">
+      </div>
+      <div class="actions">
+        <button class="icon-btn" id="theme" title="Switch theme">☾</button>
+        <button class="icon-btn" id="layout" title="Toggle layout">▦</button>
+        <button class="primary" id="newNote">＋ New note</button>
+      </div>
+    </header>
+    <div class="heading">
+      <div><h1 id="pageTitle">All notes</h1>
+        <div class="subtitle" id="subtitle">A little space for everything on your mind.</div>
+      </div>
+    </div>
+    <div id="notesArea"></div>
+  </main>
+</div>
+
+<nav class="mobile-nav">
+  <button data-view="notes"><span>▤</span>Notes</button>
+  <button data-view="pinned"><span>⌖</span>Pinned</button>
+  <button data-view="checklists"><span>☑</span>Tasks</button>
+  <button data-view="favorites"><span>☆</span>Saved</button>
+  <button data-view="archive"><span>▣</span>Archive</button>
+</nav>
+
+<div class="editor-backdrop" id="backdrop">
+  <section class="editor" role="dialog" aria-modal="true" aria-labelledby="editorHeading">
+    <div class="editor-top">
+      <h2 id="editorHeading">Create a note</h2>
+      <button class="icon-btn" id="closeEditor" aria-label="Close">✕</button>
+    </div>
+    <input class="field" id="noteTitle" placeholder="Give your note a title">
+    <textarea class="field" id="noteContent" placeholder="Start writing your thoughts..."></textarea>
+    <div class="editor-row">
+      <select class="field" id="noteLabel" aria-label="Label">
+        <option value="">No label</option>
+      </select>
+      <select class="field" id="noteColor" aria-label="Note color">
+        <option value="">Default color</option>
+        <option value="#fff4cc">Soft yellow</option>
+        <option value="#dff6e8">Mint green</option>
+        <option value="#dfeeff">Sky blue</option>
+        <option value="#f8e2ed">Soft pink</option>
+        <option value="#eee5ff">Lavender</option>
+        <option value="#ffe7d6">Peach</option>
+      </select>
+    </div>
+    <div class="editor-row">
+      <button class="icon-btn" id="checklistToggle">☑ Add checklist</button>
+      <button class="icon-btn" id="favoriteToggle">☆ Toggle favorite</button>
+    </div>
+    <div class="checklist" id="checklistEditor" hidden>
+      <div id="checkRows"></div>
+      <button class="icon-btn" id="addCheck">＋ Add item</button>
+    </div>
+    <div class="editor-actions">
+      <button class="icon-btn" id="deleteEditor">Delete</button>
+      <button class="primary" id="saveNote">Save note</button>
+    </div>
+  </section>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'memospace.notes.v1';
+  const LABEL_KEY = 'memospace.labels.v1';
+  let notes = read(KEY, []);
+  let labels = read(LABEL_KEY, ['Study', 'Personal', 'Ideas']);
+  let view = 'notes', editingId = null, isChecklist = false;
+  let isFavorite = false, listMode = false, activeLabel = '';
+  let toastTimer;
+
+  function read(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key));
+      return value ?? fallback;
+    } catch { return fallback; }
+  }
+  function persist() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(notes));
+      localStorage.setItem(LABEL_KEY, JSON.stringify(labels));
+    } catch { notify('Storage is full. Export your notes for backup.'); }
+  }
+  function notify(message) {
+    $('toast').textContent = message;
+    $('toast').style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('toast').style.display = 'none', 2400);
+  }
+  const uid = () => crypto.randomUUID
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const activeNotes = () => notes.filter(n => !n.trashed && !n.archived);
+  const byId = id => notes.find(n => n.id === id);
+
+  function renderLabels() {
+    $('labelList').innerHTML = labels.map(label =>
+      `<button class="nav ${activeLabel === label ? 'active' : ''}"
+      data-label="${escapeHTML(label)}">◇ <span>${escapeHTML(label)}</span></button>`
+    ).join('');
+    $('noteLabel').innerHTML = '<option value="">No label</option>' +
+      labels.map(l => `<option value="${escapeHTML(l)}">${escapeHTML(l)}</option>`).join('');
+  }
+
+  function render() {
+    renderLabels();
+    document.querySelectorAll('[data-view]').forEach(el =>
+      el.classList.toggle('active', el.dataset.view === view && !activeLabel));
+
+    const titles = {
+      notes:'All notes', pinned:'Pinned notes', checklists:'Checklists',
+      favorites:'Favorites', archive:'Archive', trash:'Trash'
+    };
+    $('pageTitle').textContent = activeLabel || titles[view] || 'All notes';
+    const query = $('search').value.trim().toLowerCase();
+    let list = notes.filter(n => {
+      if (view === 'trash') return n.trashed;
+      if (view === 'archive') return n.archived && !n.trashed;
+      if (n.trashed || n.archived) return false;
+      if (view === 'pinned' && !n.pinned) return false;
+      if (view === 'checklists' && !n.checklist) return false;
+      if (view === 'favorites' && !n.favorite) return false;
+      if (activeLabel && n.label !== activeLabel) return false;
+      return true;
+    });
+    if (query) list = list.filter(n =>
+      `${n.title} ${n.content} ${n.label} ${(n.items||[]).map(i=>i.text).join(' ')}`
+        .toLowerCase().includes(query));
+    list.sort((a,b) => Number(b.pinned)-Number(a.pinned) ||
+      (b.updated||0)-(a.updated||0));
+
+    $('subtitle').textContent = query
+      ? `${list.length} matching note${list.length === 1 ? '' : 's'}`
+      : 'A little space for everything on your mind.';
+    const area = $('notesArea');
+    if (!list.length) {
+      area.innerHTML = `<div class="empty"><div>✳</div><strong>
+        ${query ? 'No matching notes' : 'Nothing here just yet'}</strong>
+        <p>${query ? 'Try another search.' : 'Create a note and make this space yours.'}</p>
+        ${view !== 'trash' && view !== 'archive'
+          ? '<button class="primary" id="emptyCreate">＋ Create a note</button>' : ''}
+      </div>`;
+      $('emptyCreate')?.addEventListener('click', openEditor);
+      return;
+    }
+
+    const makeCard = n => {
+      const items = (n.items || []).map(i =>
+        `<div style="padding:3px 0;${i.done?'text-decoration:line-through;opacity:.6':''}">
+          ${i.done?'☑':'□'} ${escapeHTML(i.text)}</div>`).join('');
+      const date = n.updated ? new Date(n.updated).toLocaleDateString() : '';
+      const trashActions = n.trashed
+        ? `<button data-action="restore" data-id="${n.id}">↶ Restore</button>
+           <button data-action="permanent" data-id="${n.id}">Delete forever</button>`
+        : `<button data-action="edit" data-id="${n.id}">✎ Edit</button>
+           ${view === 'archive'
+             ? `<button data-action="unarchive" data-id="${n.id}">↶ Unarchive</button>`
+             : `<button data-action="archive" data-id="${n.id}">▣ Archive</button>`}
+           <button data-action="trash" data-id="${n.id}">♲ Trash</button>`;
+      return `<article class="note ${n.pinned?'pinned':''}"
+        style="${n.color?'background:'+n.color+';color:#252536':''}">
+        <button class="pin" data-action="pin" data-id="${n.id}"
+          aria-label="Toggle pin">${n.pinned?'📌':'⌖'}</button>
+        <h3>${escapeHTML(n.title || 'Untitled note')}</h3>
+        ${n.content ? `<div class="note-body">${escapeHTML(n.content)}</div>` : ''}
+        ${n.checklist ? `<div class="checklist">${items}</div>` : ''}
+        ${n.label ? `<span class="note-label">${escapeHTML(n.label)}</span>` : ''}
+        <div class="note-footer">
+          ${!n.trashed ? `<button data-action="favorite" data-id="${n.id}">
+            ${n.favorite?'★':'☆'}</button>` : ''}
+          ${trashActions}
+          <span class="note-date">${escapeHTML(date)}</span>
+        </div>
+      </article>`;
+    };
+    area.innerHTML = `<div class="section-title">${view==='trash'?'DELETED NOTES':
+      view==='archive'?'ARCHIVED':'YOUR NOTES'} · ${list.length}</div>
+      <div class="note-grid" style="${listMode?'grid-template-columns:1fr':''}">
+      ${list.map(makeCard).join('')}</div>`;
+  }
+
+  function openEditor(id = null) {
+    editingId = id;
+    const n = id ? byId(id) : null;
+    isChecklist = !!n?.checklist;
+    isFavorite = !!n?.favorite;
+    $('editorHeading').textContent = n ? 'Edit your note' : 'Create a note';
+    $('noteTitle').value = n?.title || '';
+    $('noteContent').value = n?.content || '';
+    $('noteLabel').value = n?.label || '';
+    $('noteColor').value = n?.color || '';
+    $('checklistEditor').hidden = !isChecklist;
+    $('checkRows').innerHTML = '';
+    (n?.items || []).forEach(i => addCheckRow(i.text, i.done));
+    $('deleteEditor').style.visibility = n ? 'visible' : 'hidden';
+    $('backdrop').classList.add('show');
+    $('noteTitle').focus();
+  }
+  function closeEditor() { $('backdrop').classList.remove('show'); }
+  function addCheckRow(text = '', done = false) {
+    const row = document.createElement('div');
+    row.className = 'check-row';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox'; checkbox.checked = done;
+    const input = document.createElement('input');
+    input.type = 'text'; input.placeholder = 'Checklist item'; input.value = text;
+    const remove = document.createElement('button');
+    remove.className = 'icon-btn'; remove.textContent = '×';
+    remove.setAttribute('aria-label','Remove checklist item');
+    remove.onclick = () => row.remove();
+    row.append(checkbox, input, remove);
+    $('checkRows').append(row);
+  }
+  function saveNote() {
+    const title = $('noteTitle').value.trim();
+    const content = $('noteContent').value.trim();
+    const items = [...$('checkRows').querySelectorAll('.check-row')].map(row => ({
+      done:row.querySelector('[type=checkbox]').checked,
+      text:row.querySelector('[type=text]').value.trim()
+    })).filter(i => i.text);
+    if (!title && !content && !items.length) {
+      notify('Add a title, some text, or a checklist first.'); return;
+    }
+    const old = editingId ? byId(editingId) : null;
+    const n = {
+      ...(old || {id:uid(),pinned:false,archived:false,trashed:false}),
+      title,content,label:$('noteLabel').value,color:$('noteColor').value,
+      checklist:isChecklist,items,favorite:isFavorite,updated:Date.now()
+    };
+    if (old) notes = notes.map(x => x.id === editingId ? n : x);
+    else notes.unshift(n);
+    persist(); render(); closeEditor(); notify('Note saved');
+  }
+
+  document.querySelectorAll('[data-view]').forEach(el =>
+    el.addEventListener('click', () => {
+      view = el.dataset.view; activeLabel = ''; render();
+    }));
+  $('labelList').addEventListener('click', e => {
+    const button = e.target.closest('[data-label]');
+    if (button) { activeLabel = button.dataset.label; view = 'notes'; render(); }
+  });
+  $('addLabel').onclick = () => {
+    const label = prompt('Name your new label:');
+    if (label && label.trim() && !labels.includes(label.trim())) {
+      labels.push(label.trim()); persist(); render();
+    }
+  };
+  $('newNote').onclick = () => openEditor();
+  $('closeEditor').onclick = closeEditor;
+  $('saveNote').onclick = saveNote;
+  $('backdrop').addEventListener('click', e => {
+    if (e.target === $('backdrop')) closeEditor();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeEditor();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' &&
+      $('backdrop').classList.contains('show')) saveNote();
+  });
+  $('search').addEventListener('input', render);
+  $('checklistToggle').onclick = () => {
+    isChecklist = !isChecklist;
+    $('checklistEditor').hidden = !isChecklist;
+    if (isChecklist && !$('checkRows').children.length) addCheckRow();
+  };
+  $('addCheck').onclick = () => addCheckRow();
+  $('favoriteToggle').onclick = () => {
+    isFavorite = !isFavorite;
+    notify(isFavorite ? 'Will be saved to Favorites' : 'Removed from Favorites');
+  };
+  $('deleteEditor').onclick = () => {
+    if (!editingId) return;
+    const n = byId(editingId);
+    if (n) n.trashed = true;
+    persist(); render(); closeEditor(); notify('Moved to Trash');
+  };
+  $('notesArea').addEventListener('click', e => {
+    const b = e.target.closest('[data-action]');
+    if (!b) return;
+    const n = byId(b.dataset.id);
+    if (!n) return;
+    switch(b.dataset.action) {
+      case 'edit': openEditor(n.id); return;
+      case 'pin': n.pinned = !n.pinned; break;
+      case 'favorite': n.favorite = !n.favorite; break;
+      case 'archive': n.archived = true; break;
+      case 'unarchive': n.archived = false; break;
+      case 'trash': n.trashed = true; break;
+      case 'restore': n.trashed = false; n.archived = false; break;
+      case 'permanent':
+        if (!confirm('Permanently delete this note? This cannot be undone.')) return;
+        notes = notes.filter(x => x.id !== n.id); break;
+    }
+    persist(); render();
+  });
+  $('theme').onclick = () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('memospace.theme',
+      document.body.classList.contains('dark') ? 'dark' : 'light');
+  };
+  if (localStorage.getItem('memospace.theme') === 'dark')
+    document.body.classList.add('dark');
+
+  $('layout').onclick = () => {
+    listMode = !listMode;
+    $('layout').textContent = listMode ? '☰' : '▦';
+    render();
+  };
+
+  // Export a JSON backup or import one.
+  const backup = document.createElement('div');
+  backup.style.cssText = 'display:flex;gap:8px;margin-top:18px;flex-wrap:wrap';
+  backup.innerHTML = `<button class="icon-btn" id="exportData">↓ Export backup</button>
+    <button class="icon-btn" id="importData">↑ Import backup</button>
+    <input id="backupFile" type="file" accept=".json,application/json" hidden>`;
+  $('notesArea').before(backup);
+  $('exportData').onclick = () => {
+    const blob = new Blob([JSON.stringify({notes,labels},null,2)],
+      {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'memospace-backup.json'; a.click();
+    URL.revokeObjectURL(url);
+    notify('Backup exported');
+  };
+  $('importData').onclick = () => $('backupFile').click();
+  $('backupFile').onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!Array.isArray(data.notes)) throw Error('Invalid backup');
+      if (!confirm('Import backup? Existing notes will be replaced.')) return;
+      notes = data.notes.filter(n => n && typeof n.id === 'string');
+      if (Array.isArray(data.labels)) labels = data.labels.filter(l => typeof l === 'string');
+      persist(); render(); notify('Backup imported');
+    } catch { notify('Could not read that backup file'); }
+    e.target.value = '';
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
